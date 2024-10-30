@@ -10,5 +10,9 @@ func main() {
 
 	server.Handler = newServerMux
 	server.Addr = ":8080"
+	newServerMux.Handle("/", http.FileServer(http.Dir(".")))
+	newServerMux.Handle("/assets", http.FileServer(http.Dir("./assets")))
+
 	server.ListenAndServe()
+
 }
