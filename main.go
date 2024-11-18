@@ -34,6 +34,7 @@ func main() {
 	newServerMux.HandleFunc(fmt.Sprintf("GET %v/healthz", api_prefix), handlerReadiness)	
 	newServerMux.HandleFunc(fmt.Sprintf("GET %v/metrics", admin_prefix), apiConfigVar.handlerMetrics)
 	newServerMux.HandleFunc(fmt.Sprintf("POST %v/reset", admin_prefix), apiConfigVar.handlerReset)
+	newServerMux.HandleFunc(fmt.Sprintf("POST %v/validate_chirp", api_prefix), jsonHandler)
 
 	log.Printf("Serving files from %s on port: %s\n", filepathRoot, port)
 	log.Fatal(server.ListenAndServe())
