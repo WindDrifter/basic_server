@@ -3,8 +3,12 @@ import (
 	"net/http"
 	"log"
 	"encoding/json"
+    "strings"
+    "slices"
+    // "github.com/winddrifter/basic_server/internal/database"
+
 )
-const badWords := ["kerfuffle", "vsharbert", "fornax"]
+
 
 func jsonHandler(w http.ResponseWriter, r *http.Request){
     type parameters struct {
@@ -13,19 +17,18 @@ func jsonHandler(w http.ResponseWriter, r *http.Request){
         Body string `json:"body"`
     }
     type returnVals struct {
-        Valid bool `json:"valid,omitempty"`
+        CleanedBody string `json:"cleaned_body,omitempty"`
         ErrReturn string `json:"error,omitempty"`
+    }
+
+    returnVal := returnVals{
+        ErrReturn:"something went wrong",
     }
 
     decoder := json.NewDecoder(r.Body)
     params := parameters{}
     err := decoder.Decode(&params)
     if err != nil  {
-        // an error will be thrown if the JSON is invalid or has the wrong types
-        // any missing fields will simply have their values in the struct set to their zero value
-        returnVal := returnVals{
-            ErrReturn:"something went wrong",
-        }
 
         dat, returnErr := json.Marshal(returnVal)
         if returnErr != nil {
@@ -41,9 +44,7 @@ func jsonHandler(w http.ResponseWriter, r *http.Request){
         }
 
     } else if len(params.Body) > 140 {
-        returnVal := returnVals{
-            ErrReturn:"Chirp is too long",
-        }
+        returnVal.ErrReturn = "Chirp is too long"
         dat, returnErr := json.Marshal(returnVal)
         if returnErr != nil {
             
@@ -58,9 +59,9 @@ func jsonHandler(w http.ResponseWriter, r *http.Request){
 
         }
     } else {
-        returnVal := returnVals{
-            Valid:true,
-        }
+        returnVal.ErrReturn = ""
+        returnVal.CleanedBody = maybeReplaceBadWord(params.Body)
+
         dat, returnErr := json.Marshal(returnVal)
         
         if returnErr != nil {
@@ -77,3 +78,47 @@ func jsonHandler(w http.ResponseWriter, r *http.Request){
     }
 }
 
+func maybeReplaceBadWord(body string) string{
+    
+    bodySplit := strings.Split(body, " ")
+    badWords := []string{"kerfuffle", "sharbert", "fornax"}
+    var returnVal []string
+    for _, word := range bodySplit{
+        if slices.Contains(badWords, strings.ToLower(word)) {
+
+            returnVal = append(returnVal, "****")
+        } else {
+            returnVal = append(returnVal, word)
+        }
+    }
+    return strings.Join(returnVal, " ")
+
+
+}
+
+func respondWithError(w http.ResponseWriter, code int, msg string, err error) {
+	if err != nil {
+		log.Println(err)
+	}
+	if code > 499 {
+		log.Printf("Responding with 5XX error: %s", msg)
+	}
+	type errorResponse struct {
+		Error string `json:"error"`
+	}
+	respondWithJSON(w, code, errorResponse{
+		Error: msg,
+	})
+}
+
+func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
+	w.Header().Set("Content-Type", "application/json")
+	dat, err := json.Marshal(payload)
+	if err != nil {
+		log.Printf("Error marshalling JSON: %s", err)
+		w.WriteHeader(500)
+		return
+	}
+	w.WriteHeader(code)
+	w.Write(dat)
+}

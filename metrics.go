@@ -23,8 +23,3 @@ func (cfg *apiConfig) middlewareMetricsInc(next http.Handler) http.Handler {
 	})
 }
 
-func (cfg *apiConfig) handlerReset(rw http.ResponseWriter, r *http.Request) {
-	cfg.fileserverHits.Add(-cfg.fileserverHits.Load())
-	rw.Header().Add("Content-Type", "text/plain; charset=utf-8")
-	rw.WriteHeader(http.StatusOK)
-}
