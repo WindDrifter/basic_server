@@ -5,11 +5,12 @@
 package database
 
 import (
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type Chirp struct {
-	ID        pgtype.UUID
+	ID        uuid.UUID
 	CreatedAt pgtype.Timestamp
 	UpdatedAt pgtype.Timestamp
 	Body      pgtype.Text
@@ -17,8 +18,9 @@ type Chirp struct {
 }
 
 type User struct {
-	ID        pgtype.UUID
-	CreatedAt pgtype.Timestamp
-	UpdatedAt pgtype.Timestamp
-	Email     pgtype.Text
+	ID           uuid.UUID
+	CreatedAt    pgtype.Timestamp
+	UpdatedAt    pgtype.Timestamp
+	Email        pgtype.Text
+	PasswordHash string
 }

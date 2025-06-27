@@ -8,6 +8,7 @@ package database
 import (
 	"context"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -47,12 +48,42 @@ func (q *Queries) DeleteAllChirps(ctx context.Context) error {
 	return err
 }
 
-const getAllChirpByUser = `-- name: GetAllChirpByUser :many
-SELECT id, created_at, updated_at, body, user_id from chirps where user_id = $1
+const getAllChirps = `-- name: GetAllChirps :many
+SELECT id, created_at, updated_at, body, user_id from chirps order by created_at ASC
 `
 
-func (q *Queries) GetAllChirpByUser(ctx context.Context, userID pgtype.UUID) ([]Chirp, error) {
-	rows, err := q.db.Query(ctx, getAllChirpByUser, userID)
+func (q *Queries) GetAllChirps(ctx context.Context) ([]Chirp, error) {
+	rows, err := q.db.Query(ctx, getAllChirps)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Chirp
+	for rows.Next() {
+		var i Chirp
+		if err := rows.Scan(
+			&i.ID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Body,
+			&i.UserID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getAllChirpsByUser = `-- name: GetAllChirpsByUser :many
+SELECT id, created_at, updated_at, body, user_id from chirps where user_id = $1 order by created_at ASC
+`
+
+func (q *Queries) GetAllChirpsByUser(ctx context.Context, userID pgtype.UUID) ([]Chirp, error) {
+	rows, err := q.db.Query(ctx, getAllChirpsByUser, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -81,7 +112,7 @@ const getChirpById = `-- name: GetChirpById :one
 SELECT id, created_at, updated_at, body, user_id from chirps where id = $1
 `
 
-func (q *Queries) GetChirpById(ctx context.Context, id pgtype.UUID) (Chirp, error) {
+func (q *Queries) GetChirpById(ctx context.Context, id uuid.UUID) (Chirp, error) {
 	row := q.db.QueryRow(ctx, getChirpById, id)
 	var i Chirp
 	err := row.Scan(

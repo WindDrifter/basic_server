@@ -12,21 +12,28 @@ import (
 )
 
 const createUser = `-- name: CreateUser :one
-INSERT INTO users (email)
+INSERT INTO users (email, password_hash)
 VALUES (
-    $1
+    $1,
+    $2
 )
-RETURNING id, created_at, updated_at, email
+RETURNING id, created_at, updated_at, email, password_hash
 `
 
-func (q *Queries) CreateUser(ctx context.Context, email pgtype.Text) (User, error) {
-	row := q.db.QueryRow(ctx, createUser, email)
+type CreateUserParams struct {
+	Email        pgtype.Text
+	PasswordHash string
+}
+
+func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
+	row := q.db.QueryRow(ctx, createUser, arg.Email, arg.PasswordHash)
 	var i User
 	err := row.Scan(
 		&i.ID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Email,
+		&i.PasswordHash,
 	)
 	return i, err
 }
@@ -41,7 +48,7 @@ func (q *Queries) DeleteAllUsers(ctx context.Context) error {
 }
 
 const getAllUsers = `-- name: GetAllUsers :many
-SELECT id, created_at, updated_at, email from users
+SELECT id, created_at, updated_at, email, password_hash from users
 `
 
 func (q *Queries) GetAllUsers(ctx context.Context) ([]User, error) {
@@ -58,6 +65,7 @@ func (q *Queries) GetAllUsers(ctx context.Context) ([]User, error) {
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.Email,
+			&i.PasswordHash,
 		); err != nil {
 			return nil, err
 		}
@@ -70,7 +78,7 @@ func (q *Queries) GetAllUsers(ctx context.Context) ([]User, error) {
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, created_at, updated_at, email from users where email = $1
+SELECT id, created_at, updated_at, email, password_hash from users where email = $1
 `
 
 func (q *Queries) GetUserByEmail(ctx context.Context, email pgtype.Text) (User, error) {
@@ -81,6 +89,7 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email pgtype.Text) (User, 
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Email,
+		&i.PasswordHash,
 	)
 	return i, err
 }

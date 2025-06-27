@@ -16,6 +16,7 @@ import (
 type apiConfig struct {
 	fileserverHits atomic.Int32
 	db *database.Queries
+	jwtSecret string 
 }
 
 func main() {
@@ -23,6 +24,7 @@ func main() {
 	godotenv.Load()
 	ctx := context.Background()
 	dbURL := os.Getenv("DB_URL")
+	jwtSecret := os.Getenv("JWT_SECRET")
 	fmt.Println(dbURL)
 	conn, _ := pgx.Connect(ctx, dbURL)
 
@@ -42,6 +44,7 @@ func main() {
 	apiConfigVar:= apiConfig{
 		fileserverHits: atomic.Int32{},
 		db: queries,
+		jwtSecret: jwtSecret,
 	}
 
 	newServerMux.Handle("/app/", apiConfigVar.middlewareMetricsInc(http.StripPrefix("/app", http.FileServer(http.Dir(filepathRoot)))))
@@ -52,7 +55,11 @@ func main() {
 	newServerMux.HandleFunc(fmt.Sprintf("POST %v/reset", admin_prefix), apiConfigVar.handlerReset)
 	newServerMux.HandleFunc(fmt.Sprintf("POST %v/validate_chirp", api_prefix), jsonHandler)
 	newServerMux.HandleFunc(fmt.Sprintf("POST %v/users", api_prefix), apiConfigVar.handlerUsersCreate)
+	newServerMux.HandleFunc(fmt.Sprintf("POST %v/login", api_prefix), apiConfigVar.handlerLoginUser)
 
+	newServerMux.HandleFunc(fmt.Sprintf("GET %v/chirps/", api_prefix), apiConfigVar.handlerAllChirps)
+	newServerMux.HandleFunc(fmt.Sprintf("POST %v/chirps", api_prefix), apiConfigVar.handlerChirpCreate)
+	newServerMux.HandleFunc(fmt.Sprintf("GET %v/chirps/{chirpID}", api_prefix), apiConfigVar.handlerGetChirp)
 
 	log.Printf("Serving files from %s on port: %s\n", filepathRoot, port)
 	log.Fatal(server.ListenAndServe())
